@@ -52,6 +52,26 @@ client.on('qr', qr => {
 
 // Handle registration messages
 client.on('message_create', async message => {
+    if (message.body?.startsWith('!group')) {
+        const [, name] = message.body.split('-');
+
+        if (!name) {
+            await client.sendMessage(message.to, 'Please provide your group name in the format: !register-YourName');
+            return;
+        }
+
+        try {
+            await insertSenderId(message.to, name);
+            await client.sendMessage(message.to, `Your group has been registered successfully, ${name}. Thank you!`);
+        } catch (error) {
+            if (error === 'UniqueConstraint') {
+                await client.sendMessage(message.to, 'This group is already registered with this number.');
+            } else {
+                console.error('Registration error:', error);
+                await client.sendMessage(message.to, 'An error occurred while registering. Please try again later.');
+            }
+        }
+    }
     if (message.body?.startsWith('!register')) {
         const [, name] = message.body.split('-');
 
@@ -102,7 +122,7 @@ const sendReminders = async () => {
 };
 
 // Schedule reminders at 07:30 AM and 04:30 PM (Asia/Jakarta timezone)
-cron.schedule('30 7 * * *', async () => {
+cron.schedule('21 9 * * *', async () => {
     console.log('Sending morning reminders...');
     await sendReminders();
 }, {

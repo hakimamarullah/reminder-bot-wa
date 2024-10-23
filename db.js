@@ -10,16 +10,16 @@ const db = new sqlite3.Database('./attendance.db', (err) => {
 });
 
 // Create the table with sender_id and name columns if it doesn't exist
-db.run(
-    'CREATE TABLE IF NOT EXISTS attendance_log (sender_id TEXT UNIQUE, name TEXT)',
-    (err) => {
-        if (err) {
-            console.error('Error creating table:', err);
-        } else {
-            console.log('Table created or already exists');
-        }
-    }
-);
+// db.run(
+//     'CREATE TABLE IF NOT EXISTS attendance_log (sender_id TEXT UNIQUE, name TEXT)',
+//     (err) => {
+//         if (err) {
+//             console.error('Error creating table:', err);
+//         } else {
+//             console.log('Table created or already exists');
+//         }
+//     }
+// );
 
 // Function to insert a sender_id and name
 // Function to insert a sender_id and name
