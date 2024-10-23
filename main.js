@@ -24,6 +24,17 @@ Avengers HQ
 `;
 }
 
+const groupRegisterOptions = {
+    alreadyRegisteredMsg: 'This group is already registered with this number.',
+    successMessage: (name) => `Your group has been registered successfully, ${name}. Thank you!`,
+    guideMessage: 'Please provide your group name in the format: !group-groupName'
+}
+
+const personalRegisterOptions = {
+    alreadyRegisteredMsg: 'You are already registered with this number.',
+    successMessage: (name) => `You have been registered successfully, ${name}. Thank you!`,
+    guideMessage: 'Please provide your name in the format: !register-YourName'
+}
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
@@ -50,47 +61,35 @@ client.on('qr', qr => {
     qrcode.generate(qr, {small: true});
 });
 
+const handleRegister = async (message, confirmDest, options) => {
+    const [, name] = message.body.split('-');
+
+    const {guideMessage, successMessage, alreadyRegisteredMessage} = options;
+    if (!name) {
+        await client.sendMessage(confirmDest, guideMessage);
+        return;
+    }
+
+    try {
+        await insertSenderId(confirmDest, name);
+        await client.sendMessage(confirmDest, successMessage(name));
+    } catch (error) {
+        if (error === 'UniqueConstraint') {
+            await client.sendMessage(confirmDest, alreadyRegisteredMessage);
+        } else {
+            console.error('Registration error:', error);
+            await client.sendMessage(confirmDest, 'An error occurred while registering. Please try again later.');
+        }
+    }
+}
+
 // Handle registration messages
 client.on('message_create', async message => {
     if (message.body?.startsWith('!group')) {
-        const [, name] = message.body.split('-');
-
-        if (!name) {
-            await client.sendMessage(message.to, 'Please provide your group name in the format: !register-YourName');
-            return;
-        }
-
-        try {
-            await insertSenderId(message.to, name);
-            await client.sendMessage(message.to, `Your group has been registered successfully, ${name}. Thank you!`);
-        } catch (error) {
-            if (error === 'UniqueConstraint') {
-                await client.sendMessage(message.to, 'This group is already registered with this number.');
-            } else {
-                console.error('Registration error:', error);
-                await client.sendMessage(message.to, 'An error occurred while registering. Please try again later.');
-            }
-        }
+        await handleRegister(message, message.to, groupRegisterOptions);
     }
     if (message.body?.startsWith('!register')) {
-        const [, name] = message.body.split('-');
-
-        if (!name) {
-            await client.sendMessage(message.from, 'Please provide your name in the format: !register-YourName');
-            return;
-        }
-
-        try {
-            await insertSenderId(message.from, name);
-            await client.sendMessage(message.from, `You have been registered successfully, ${name}. Thank you!`);
-        } catch (error) {
-            if (error === 'UniqueConstraint') {
-                await client.sendMessage(message.from, 'You are already registered with this number.');
-            } else {
-                console.error('Registration error:', error);
-                await client.sendMessage(message.from, 'An error occurred while registering. Please try again later.');
-            }
-        }
+        await handleRegister(message, message.from, personalRegisterOptions);
     }
 });
 
@@ -102,7 +101,7 @@ const sendReminders = async () => {
     try {
         const receivers = await selectAllSenderIds();
         if (receivers.length > 0) {
-            for (const { sender_id, name } of receivers) {
+            for (const {sender_id, name} of receivers) {
                 try {
                     await client.sendMessage(sender_id, getMessage(name));
                     console.log(`Reminder sent to ${sender_id}`);
